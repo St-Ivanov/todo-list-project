@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"slices"
 	"strconv"
@@ -18,6 +19,7 @@ var (
 	errIncNumOfPar     = errors.New("incorrect number of parameters.")
 	errParseStrToInt   = errors.New("error parse string to int.")
 	errDowloadPage     = errors.New("error dowload the page")
+	Loger              *log.Logger
 )
 
 // Function for finding the next date according to a specified rule
@@ -132,7 +134,7 @@ func nextDate(now time.Time, dstart string, repeat string) (string, error) {
 				}
 			}
 
-			if date.After(now) && slices.Contains(months, int(date.Month())) && flag {
+			if date.After(now) && (slices.Contains(months, int(date.Month())) || len(months) == 0) && flag {
 				break
 			}
 		}
@@ -176,5 +178,8 @@ func handlerNextDate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(ans))
+	_, err = w.Write([]byte(ans))
+	if err != nil {
+		Loger.Println(err)
+	}
 }

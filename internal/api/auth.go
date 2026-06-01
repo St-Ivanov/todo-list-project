@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/St-Ivanov/todo-list-project/internal/models"
 	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	Pass = ""
 )
 
 // Authentication verification function
@@ -21,19 +24,17 @@ func handlerAuth(w http.ResponseWriter, r *http.Request) {
 
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	err = json.Unmarshal(buf.Bytes(), &req)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	password := os.Getenv("TODO_PASSWORD")
-
-	if len(password) > 0 && password == req.Password {
+	if len(Pass) > 0 && Pass == req.Password {
 		claims := jwt.MapClaims{
 			"exp": time.Now().Add(8 * time.Hour).Unix(),
 			"iat": time.Now().Unix(),
@@ -41,21 +42,20 @@ func handlerAuth(w http.ResponseWriter, r *http.Request) {
 
 		jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-		signedToken, err := jwtToken.SignedString([]byte(password))
+		signedToken, err := jwtToken.SignedString([]byte(Pass))
 		if err != nil {
-			writeJson(w, map[string]string{"error": "Invalid password"})
+			writeJson(w, map[string]string{"error": "Invalid password"}, http.StatusUnauthorized)
 			return
 		}
 
-		writeJson(w, map[string]string{"token": signedToken})
+		writeJson(w, map[string]string{"token": signedToken}, http.StatusOK)
 	}
 }
 
 // User authorization verification function
 func checkAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		password := os.Getenv("TODO_PASSWORD")
-		if len(password) > 0 {
+		if len(Pass) > 0 {
 			var jwtCookie string
 
 			cookie, err := r.Cookie("token")
@@ -67,7 +67,7 @@ func checkAuth(next http.HandlerFunc) http.HandlerFunc {
 				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("the encryption method does not match")
 				}
-				return []byte(password), nil
+				return []byte(Pass), nil
 			}, jwt.WithExpirationRequired())
 			if err != nil || !token.Valid {
 				http.Error(w, "Authentification required", http.StatusUnauthorized)

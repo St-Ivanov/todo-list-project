@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM alpine:latest
 
 WORKDIR /todo_app
 
@@ -9,7 +9,5 @@ RUN mkdir ./web
 COPY web ./web
 
 RUN chmod +x todo_app
-
-EXPOSE 7540
 
 CMD ["./todo_app"]

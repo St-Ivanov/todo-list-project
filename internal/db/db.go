@@ -38,10 +38,12 @@ func Init(dbFile string) error {
 	if install {
 		_, err = DB.Exec(schemaCreateTable)
 		if err != nil {
+			DB.Close()
 			return err
 		}
 		_, err = DB.Exec(schemaCreateIndex)
 		if err != nil {
+			DB.Close()
 			return err
 		}
 	}

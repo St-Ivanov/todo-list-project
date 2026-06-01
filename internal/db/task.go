@@ -19,46 +19,56 @@ const (
 
 // A function that queries the database to retrieve tasks
 func GetTasks(limit int, search string) (models.TaskResponse, error) {
-	var data *sql.Rows
+	var (
+		query  string
+		params []interface{}
+		data   *sql.Rows
+	)
 
 	date, err := time.Parse(formatDataSearch, search)
 	if err == nil && date.Format(formatDataSearch) == search {
 		dateString := date.Format(models.DataFormat)
-		data, err = DB.Query(`
+		query = `
 			SELECT id, date, title, comment, repeat
 			FROM scheduler
 			WHERE date = :date
 			ORDER BY date
 			LIMIT :limit;
-			`,
+		`
+		params = []interface{}{
 			sql.Named("date", dateString),
 			sql.Named("limit", limit),
-		)
-	} else if search != "" {
+		}
+	}
+	if query == "" && search != "" {
 		search = "%" + search + "%"
-
-		data, err = DB.Query(`
+		query = `
 			SELECT id, date, title, comment, repeat
 			FROM scheduler
 			WHERE title LIKE :search OR comment LIKE :search
 			ORDER BY date
 			LIMIT :limit;
-		`,
+		`
+		params = []interface{}{
 			sql.Named("search", search),
 			sql.Named("limit", limit),
-		)
-	} else {
-		data, err = DB.Query(`
+		}
+	}
+	if query == "" {
+		query = `
 			SELECT id, date, title, comment, repeat
 			FROM scheduler
 			LIMIT :limit;
-			`,
+		`
+		params = []interface{}{
 			sql.Named("limit", limit),
-		)
+		}
 	}
+	data, err = DB.Query(query, params...)
 	if err != nil {
 		return models.TaskResponse{}, errDBQuery
 	}
+	defer data.Close()
 
 	var result models.TaskResponse
 	result.Tasks = make([]models.Task, 0)

@@ -44,23 +44,23 @@ func handlerTask(w http.ResponseWriter, r *http.Request) {
 func handlerAddTask(w http.ResponseWriter, r *http.Request) {
 	task, err := readJson(r)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	err = updateDate(&task)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
 	last, err := db.AddTask(&task)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
-	writeJson(w, map[string]string{"id": strconv.FormatInt(last, 10)})
+	writeJson(w, map[string]string{"id": strconv.FormatInt(last, 10)}, http.StatusOK)
 }
 
 // Handler for receiving all tasks
@@ -74,57 +74,57 @@ func handlerGetTasks(w http.ResponseWriter, r *http.Request) {
 
 	data, err := db.GetTasks(limitTasksOnPage, search)
 	if err != nil {
-		writeJson(w, map[string]string{"error": "db error."})
+		writeJson(w, map[string]string{"error": "db error."}, http.StatusInternalServerError)
 		return
 	}
 
-	writeJson(w, data)
+	writeJson(w, data, http.StatusOK)
 }
 
 // Task update handler
 func handlerUpdateTask(w http.ResponseWriter, r *http.Request) {
 	task, err := readJson(r)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	err = updateDate(&task)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
 	err = db.UpdateTask(&task)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
-	writeJson(w, map[string]string{})
+	writeJson(w, map[string]string{}, http.StatusOK)
 }
 
 // Task deletion handler
 func handlerDeleteTask(w http.ResponseWriter, r *http.Request) {
 	idString := r.FormValue("id")
 	if idString == "undefined" {
-		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()})
+		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	id, err := strconv.ParseInt(idString, 10, 64)
 	if err != nil {
-		writeJson(w, map[string]string{"error": errIncIdFormat.Error()})
+		writeJson(w, map[string]string{"error": errIncIdFormat.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	err = db.DeleteTask(id)
 	if err != nil {
-		writeJson(w, map[string]string{"error": err.Error()})
+		writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
 
-	writeJson(w, map[string]string{})
+	writeJson(w, map[string]string{}, http.StatusOK)
 }
 
 // A handler for marking a task as completed
@@ -136,25 +136,25 @@ func handlerDoneTask(w http.ResponseWriter, r *http.Request) {
 
 	idString := r.FormValue("id")
 	if idString == "undefined" {
-		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()})
+		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()}, http.StatusBadRequest)
 		return
 	}
 	id, err := strconv.ParseInt(idString, 10, 64)
 	if err != nil {
-		writeJson(w, map[string]string{"error": errIncIdFormat.Error()})
+		writeJson(w, map[string]string{"error": errIncIdFormat.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJson(w, map[string]string{"error": errNotFindID.Error()})
+		writeJson(w, map[string]string{"error": errNotFindID.Error()}, http.StatusInternalServerError)
 		return
 	}
 
 	if task.Repeat == "" {
 		err = db.DeleteTask(id)
 		if err != nil {
-			writeJson(w, map[string]string{"error": err.Error()})
+			writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 			return
 		}
 	} else {
@@ -162,40 +162,40 @@ func handlerDoneTask(w http.ResponseWriter, r *http.Request) {
 
 		data, err := nextDate(now, task.Date, task.Repeat)
 		if err != nil {
-			writeJson(w, map[string]string{"error": err.Error()})
+			writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 			return
 		}
 
 		err = db.UpdateDoneTask(id, data)
 		if err != nil {
-			writeJson(w, map[string]string{"error": err.Error()})
+			writeJson(w, map[string]string{"error": err.Error()}, http.StatusInternalServerError)
 			return
 		}
 	}
 
-	writeJson(w, map[string]string{})
+	writeJson(w, map[string]string{}, http.StatusOK)
 }
 
 // Handler for receiving a single task by ID
 func handlerGetTask(w http.ResponseWriter, r *http.Request) {
 	idString := r.FormValue("id")
 	if idString == "undefined" {
-		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()})
+		writeJson(w, map[string]string{"error": errIdIsEmpty.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	id, err := strconv.ParseInt(idString, 10, 64)
 	if err != nil {
-		writeJson(w, map[string]string{"error": errIncIdFormat.Error()})
+		writeJson(w, map[string]string{"error": errIncIdFormat.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJson(w, map[string]string{"error": errNotFindID.Error()})
+		writeJson(w, map[string]string{"error": errNotFindID.Error()}, http.StatusInternalServerError)
 		return
 	}
-	writeJson(w, task)
+	writeJson(w, task, http.StatusOK)
 }
 
 // A handler for updating the date for a task with a specified rule for repetition
@@ -233,14 +233,17 @@ func updateDate(task *models.Task) error {
 }
 
 // Function for serializing to json and sending
-func writeJson(w http.ResponseWriter, data any) {
+func writeJson(w http.ResponseWriter, data any, status int) {
 	js, err := json.Marshal(data)
 	if err != nil {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(js)
+	w.WriteHeader(status)
+	_, err = w.Write(js)
+	if err != nil {
+		Loger.Println(err)
+	}
 }
 
 // A function for deserialize json tasks
